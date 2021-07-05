@@ -47,6 +47,71 @@ const primitiveTypeToValue: Record<number, string> = {
     [Type.PrimitiveTypeId.TZ_DATETIME]: 'textValue',
     [Type.PrimitiveTypeId.TZ_TIMESTAMP]: 'textValue',
 };
+/*
+const valueLabel = primitiveTypeToValue[type.typeId];
+if (valueLabel) {
+    return {[valueLabel]: preparePrimitiveValue(type.typeId, value)};
+
+
+export function withTypeOptions(options: TypedDataOptions) {
+    return function<T extends Function>(constructor: T): T & {__options: TypedDataOptions} {
+        return Object.assign(constructor, {__options: options});
+    }
+}
+
+ */
+type primitive = boolean | string | number | Date;
+function withHelperMappings<V extends primitive>(mappings: Record<string, Ydb.Type.PrimitiveTypeId>) {
+    return function<T extends typeof Primitive>(constructor: T): T {
+        const helpers = _.transform(mappings, (helpers, type, helperName) => {
+            helpers[helperName] = (value: V) => constructor.create(type, value);
+        }, {} as Record<string, Function>);
+        return Object.assign(constructor, helpers);
+    }
+}
+@withHelperMappings<boolean>({
+    bool: Ydb.Type.PrimitiveTypeId.BOOL,
+})
+@withHelperMappings<number>({
+    int8: Type.PrimitiveTypeId.INT8,
+    uint8: Type.PrimitiveTypeId.UINT8,
+    int16: Type.PrimitiveTypeId.INT16,
+    uint16: Type.PrimitiveTypeId.UINT16,
+    int32: Type.PrimitiveTypeId.INT32,
+    uint32: Type.PrimitiveTypeId.UINT32,
+    int64: Type.PrimitiveTypeId.INT64,
+    uint64: Type.PrimitiveTypeId.UINT64,
+    float: Type.PrimitiveTypeId.FLOAT,
+    double: Type.PrimitiveTypeId.DOUBLE,
+})
+@withHelperMappings<string>({
+    string: Type.PrimitiveTypeId.STRING,
+    utf8: Type.PrimitiveTypeId.UTF8,
+    yson: Type.PrimitiveTypeId.YSON,
+    json: Type.PrimitiveTypeId.JSON,
+    uuid: Type.PrimitiveTypeId.UUID,
+    jsonDocument: Type.PrimitiveTypeId.JSON_DOCUMENT,
+})
+@withHelperMappings<Date>({
+    date: Type.PrimitiveTypeId.DATE,
+    datetime: Type.PrimitiveTypeId.DATETIME,
+    timestamp: Type.PrimitiveTypeId.TIMESTAMP,
+    tzDate: Type.PrimitiveTypeId.TZ_DATE,
+    tzDatetime: Type.PrimitiveTypeId.TZ_DATETIME,
+    tzTimestamp: Type.PrimitiveTypeId.TZ_TIMESTAMP,
+})
+export class Primitive {
+    static create(type: Ydb.Type.PrimitiveTypeId, value: primitive): ITypedValue {
+        return {
+            type: {
+                typeId: type
+            },
+            value: {
+                [primitiveTypeToValue[type]]: preparePrimitiveValue(type, value)
+            }
+        };
+    }
+}
 
 const parseLong = (input: string|number): Long|number => {
    const long = typeof input === 'string' ? Long.fromString(input) : Long.fromNumber(input);
